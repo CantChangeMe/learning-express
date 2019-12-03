@@ -1,20 +1,41 @@
 const express = require('express');
 const Joi = require('joi');
+const mysql = require('mysql');
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 const courses = [
     {courseId:'1' ,courseName:"Course1"},
     {courseId:'2' ,courseName:"Course2"},
     {courseId:'3' ,courseName:"Course3"}
 ];
 
+//Connecting to Mysql Database.
+const mysqlConnection = mysql.createConnection({
+        host: 'localhost',
+        user: 'root',
+        password: 'root',
+        database: 'mydb'
+});
+
 app.get('/',(req, res) => {
     res.send("Hello express!");
 });
 
 app.get('/api/courses' ,(req,res) =>{
-    res.send(courses);
+    mysqlConnection.query(
+        `Select * from course;`,
+        (err, courses) =>{
+            if (err) {
+              return res.send(err);
+            }else{
+               return res.json({courses});
+               // console.log(courses);
+            }
+        }
+    );
 })
 
 app.get('/api/posts/:year/:month',(req,res) => {
@@ -37,14 +58,21 @@ app.post('/api/courses',(req,res) => {
     if(result.error){
         res.status('404').send(result.error.message);
     }
-    const course = {
-        courseId: courses.length+1,
-        courseName:req.body.courseName
-    }
-    
-    courses.push(course);
-    console.log(courses);
-    res.send(course);
+    //Mysql insert starts here.
+    const courseId = 0;
+    const courseName = req.body.courseName;
+    console.log(courseName);
+    const INSERT_MYSQL_QUERY =`Insert into course values('${courseId}','${courseName}');`
+    mysqlConnection.query(
+        INSERT_MYSQL_QUERY,
+        (err, courses) =>{
+            if (err) {
+              return res.send(err);
+            }else{
+               return res.send('Successfully added the product');
+            }
+        }
+    );    
 })
 
 app.put('/api/courses/:id',(req,res) =>{
@@ -63,7 +91,7 @@ app.put('/api/courses/:id',(req,res) =>{
     res.status('200').send(course);
 })
 
-app.put('/api/courses/:id',(req,res) =>{
+app.delete('/api/courses/:id',(req,res) =>{
     const course  = courses.find(c => c.courseId == parseInt(req.params.id));
     if (!course) {
         res.status('404').send("Course not found");
@@ -85,3 +113,4 @@ console.log(port);
 app.listen(port, ()=>{
     console.log(`Listening to port ${port}`);
 })
+ 
